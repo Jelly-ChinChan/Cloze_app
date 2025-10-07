@@ -3,38 +3,30 @@ import random
 
 st.set_page_config(page_title="Cloze Test Practice", page_icon="📝", layout="centered")
 
-# ===== 全域字體 & 版面樣式 =====
+# ===== 全域字體 & 版面樣式（整體略縮小） =====
 st.markdown(
     """
     <style>
-    html, body, [class*="css"]  { font-size: 24px !important; }
-    h2 { font-size: 28px !important; margin-top: 0.25em !important; margin-bottom: 0.25em !important; }
+    html, body, [class*="css"]  { font-size: 22px !important; }
+    h2 { font-size: 26px !important; margin-top: 0.22em !important; margin-bottom: 0.22em !important; }
 
-    .block-container { padding-top: 0.4rem !important; padding-bottom: 1rem !important; max-width: 1000px; }
+    .block-container { padding-top: 0.4rem !important; padding-bottom: 0.9rem !important; max-width: 1000px; }
 
     /* 進度條卡片與題目間距更小 */
-    .progress-card { margin-bottom: 0.25rem !important; }
+    .progress-card { margin-bottom: 0.22rem !important; }
 
-    /* 移除 Radio 上方多餘空白，讓選項緊貼題目 */
+    /* 讓選項緊貼題目（去掉上方多餘空白），移除「選項：」字樣 */
     .stRadio { margin-top: 0 !important; }
     div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stRadio"]) { margin-top: 0 !important; }
 
-    /* 送出/下一題：讓兩顆按鈕緊貼在同一行（桌面與手機皆適用） */
-    [data-testid="stHorizontalBlock"]{ gap: 4px !important; flex-wrap: nowrap !important; }
-    [data-testid="column"]{ width: auto !important; flex: 0 0 auto !important; }
-    .stButton>button{ height: 48px; padding: 0 18px; }
-
-    /* 手機寬度：兩顆按鈕仍緊貼並排、滿版好點擊 */
-    @media (max-width: 640px){
-      .stButton>button{ width: 100% !important; }
-      [data-testid="column"]{ width: calc(50% - 2px) !important; flex: 0 0 calc(50% - 2px) !important; }
-    }
+    /* 單一主要按鈕外觀 */
+    .stButton>button{ height: 44px; padding: 0 18px; }
 
     /* 回饋（小字） */
-    .feedback-small { font-size: 18px !important; line-height: 1.4; margin: 6px 0 2px 0; }
+    .feedback-small { font-size: 17px !important; line-height: 1.4; margin: 6px 0 2px 0; }
     .feedback-correct { color: #1a7f37; font-weight: 700; }
     .feedback-wrong { color: #c62828; font-weight: 700; }
-    .feedback-translation { margin-top: 0.2rem; font-size: 18px !important; }
+    .feedback-translation { margin-top: 0.2rem; font-size: 17px !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -91,7 +83,7 @@ def init_state():
     st.session_state.submitted = False
     st.session_state.options = {}
     st.session_state.records = []
-    st.session_state.last_feedback = ""  # 送出後顯示在「下一題」按鈕上方
+    st.session_state.last_feedback = ""  # 送出後顯示在按鈕上方
 
 if "order" not in st.session_state:
     init_state()
@@ -117,12 +109,12 @@ current = st.session_state.idx + 1 if st.session_state.idx < total else total
 percent = int(current / total * 100)
 st.markdown(
     f"""
-    <div class="progress-card" style='background-color:#f5f5f5; padding:10px 14px; border-radius:12px;'>
+    <div class="progress-card" style='background-color:#f5f5f5; padding:9px 14px; border-radius:12px;'>
         <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;'>
-            <div style='font-size:20px;'>📘 目前進度：{current} / {total}</div>
-            <div style='font-size:18px; color:#555;'>{percent}%</div>
+            <div style='font-size:18px;'>📘 目前進度：{current} / {total}</div>
+            <div style='font-size:16px; color:#555;'>{percent}%</div>
         </div>
-        <progress value='{current}' max='{total}' style='width:100%; height:16px;'></progress>
+        <progress value='{current}' max='{total}' style='width:100%; height:14px;'></progress>
     </div>
     """,
     unsafe_allow_html=True
@@ -145,16 +137,21 @@ if st.session_state.idx < total:
             random.shuffle(opts)
             st.session_state.options[q_index] = opts
         options_display = st.session_state.options[q_index]
-        # 移除「選項：」字樣，讓選項緊貼題目
+        # 不顯示「選項：」文字，讓選項緊貼題目
         user_input_value = st.radio("", options_display, key=f"mc_{q_index}", label_visibility="collapsed")
     else:
         user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-    # 送出 / 下一題（兩顆按鈕緊貼）
-    col1, col2 = st.columns([1, 1], gap="small")
-    with col1:
-        disabled_submit = st.session_state.submitted
-        if st.button("送出答案", disabled=disabled_submit):
+    # ===== 主動作按鈕（動態標籤）：未送出=送出答案；已送出=下一題 =====
+    # 先顯示訂正/稱讚（若已送出）
+    if st.session_state.submitted and st.session_state.last_feedback:
+        st.markdown(st.session_state.last_feedback, unsafe_allow_html=True)
+
+    # 單一按鈕，依狀態變更文字
+    action_label = "下一題" if st.session_state.submitted else "送出答案"
+    if st.button(action_label, key="action_btn"):
+        if not st.session_state.submitted:
+            # 第一次按：送出並判題
             st.session_state.submitted = True
             is_correct = (user_input_value.strip().lower() == q["answer"]) if user_input_value else False
 
@@ -178,18 +175,13 @@ if st.session_state.idx < total:
             st.session_state.records.append(
                 (q["sentence"], user_input_value or "", is_correct, q["answer"])
             )
-
-    # 訂正/稱讚：顯示在「下一題」按鈕的上方
-    if st.session_state.submitted and st.session_state.last_feedback:
-        st.markdown(st.session_state.last_feedback, unsafe_allow_html=True)
-
-    with col2:
-        if st.session_state.submitted:
-            if st.button("下一題"):
-                st.session_state.idx += 1
-                st.session_state.submitted = False
-                st.session_state.last_feedback = ""
-                st.rerun()
+            st.rerun()  # 立即重繪，讓按鈕文字改成「下一題」並顯示訂正
+        else:
+            # 第二次按：前往下一題
+            st.session_state.idx += 1
+            st.session_state.submitted = False
+            st.session_state.last_feedback = ""
+            st.rerun()
 
 # ===== 結果頁 =====
 else:
@@ -204,22 +196,5 @@ else:
             show_ans = ans if ans != "" else "未作答"
             st.write(f"Q{i}: {sentence} → 你的答案：**{show_ans}**；正解：**{corr}** {icon}")
 
-    # 🎉 完成後放彩帶（confetti）
-    st.markdown(
-        """
-        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-        <script>
-        (function shootConfetti() {
-            var end = Date.now() + (3 * 1000);  // 3 秒
-            (function frame() {
-                confetti({ particleCount: 6, angle: 60, spread: 60, origin: { x: 0 } });
-                confetti({ particleCount: 6, angle: 120, spread: 60, origin: { x: 1 } });
-                if (Date.now() < end) requestAnimationFrame(frame);
-            })();
-        })();
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
-
+    # ❌ 已移除彩帶效果
     st.button("🔄 再做一次", on_click=init_state)
