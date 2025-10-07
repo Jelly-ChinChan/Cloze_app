@@ -2,25 +2,44 @@ import streamlit as st
 import random
 
 st.set_page_config(page_title="Cloze Test Practice", page_icon="✍️")
-st.title("✍️ Cloze Test Practice App")
 
-# ===== 打字模式「稱讚語」清單（隨機顯示） =====
+# ===== 全域字體樣式 =====
+st.markdown(
+    """
+    <style>
+    html, body, [class*="css"]  {
+        font-size: 24px !important;
+    }
+    h1, h2, h3 {
+        font-size: 28px !important;
+    }
+    .stRadio label, .stTextInput label {
+        font-size: 24px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("<h1>✍️ Cloze Test Practice App</h1>", unsafe_allow_html=True)
+
+# ===== 打字模式「稱讚語」 =====
 PRAISES = [
     "你好棒：)",
     "你真的超強~~",
     "果然是201的學生><",
     "太神啦!!",
     "天啊你是單字魔鬼@@",
-    "烏拉烏拉烏拉@#&%",
+    "呀哈烏拉烏拉烏拉~~~~~",
     "太厲害了^^",
     "不愧是展哥教徒呢!",
     "恭喜尼答對了ㄚㄚㄚ",
     "挖塞又答對了~",
     "太驚人了!!",
-    "好扯喔",
+    "好扯喔!!!",
 ]
 
-# ===== 題庫 (含中文翻譯) =====
+# ===== 題庫 (15 題 + 中文翻譯) =====
 QUESTION_BANK = [
     {"sentence": "The picture was hung too low on the wall and needed to be ______.",
      "answer": "adjusted", "translation": "這幅畫掛得太低，需要調整。"},
@@ -54,18 +73,18 @@ QUESTION_BANK = [
      "answer": "warmth", "translation": "她相信只有善意的話語才能在人心中帶來溫暖。"},
 ]
 
-MC_BLANK = "(空白/略過)"  # 選擇題的空白選項
+MC_BLANK = "(空白/略過)"
 
 # ===== 初始化 =====
 def init_state():
-    st.session_state.mode = "選擇題模式"            # 預設：選擇題
+    st.session_state.mode = "選擇題模式"
     st.session_state.order = list(range(len(QUESTION_BANK)))
-    random.shuffle(st.session_state.order)          # 題目順序只洗一次
-    st.session_state.idx = 0                        # 目前題目在 order 中的索引
+    random.shuffle(st.session_state.order)
+    st.session_state.idx = 0
     st.session_state.score = 0
-    st.session_state.submitted = False              # 本題是否已送出
-    st.session_state.options = {}                   # {真題索引: [四個固定選項(不含空白)]}
-    st.session_state.records = []                   # [(sentence, user_ans, correct, correct_ans)]
+    st.session_state.submitted = False
+    st.session_state.options = {}
+    st.session_state.records = []
 
 if "order" not in st.session_state:
     init_state()
@@ -74,12 +93,9 @@ if "order" not in st.session_state:
 with st.sidebar:
     st.markdown("### 設定")
     can_change_mode = (st.session_state.idx == 0 and not st.session_state.submitted)
-    st.session_state.mode = st.radio(
-        "選擇練習模式",
-        ["打字模式", "選擇題模式"],
-        index=1,
-        disabled=not can_change_mode,
-    )
+    st.session_state.mode = st.radio("選擇練習模式",
+                                     ["打字模式", "選擇題模式"],
+                                     index=1, disabled=not can_change_mode)
     if st.button("🔄 重新開始"):
         init_state()
         st.rerun()
@@ -90,9 +106,9 @@ total = len(st.session_state.order)
 if st.session_state.idx < total:
     q_index = st.session_state.order[st.session_state.idx]
     q = QUESTION_BANK[q_index]
-    st.markdown(f"**Q{st.session_state.idx + 1}. {q['sentence']}**")
 
-    # 顯示輸入或選項
+    st.markdown(f"<h2>Q{st.session_state.idx + 1}. {q['sentence']}</h2>", unsafe_allow_html=True)
+
     if st.session_state.mode == "選擇題模式":
         if q_index not in st.session_state.options:
             correct = q["answer"]
@@ -100,31 +116,29 @@ if st.session_state.idx < total:
             distractors = random.sample(pool, 3)
             opts = [correct] + distractors
             random.shuffle(opts)
-            st.session_state.options[q_index] = opts  # 只存四個真選項
+            st.session_state.options[q_index] = opts
         options_display = [MC_BLANK] + st.session_state.options[q_index]
-        user_input_value = st.radio("Choose the correct word:", options_display, key=f"mc_{q_index}")
+        user_input_value = st.radio("選項：", options_display, key=f"mc_{q_index}")
         if user_input_value == MC_BLANK:
             user_input_value = ""
     else:
-        user_input_value = st.text_input("Your answer:", key=f"input_{q_index}")
+        user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-    # 送出答案
     col1, col2 = st.columns([1, 1])
     with col1:
         disabled_submit = st.session_state.submitted
         if st.button("送出答案", disabled=disabled_submit):
             st.session_state.submitted = True
-            is_correct = (user_input_value.strip().lower() == q["answer"]) if user_input_value else False
+            is_correct = (user_input_value.strip().lower() == q["answer"])
             if is_correct:
-                # 打字模式：顯示隨機稱讚語；選擇題維持原樣
                 if st.session_state.mode == "打字模式":
-                    st.success(random.choice(PRAISES))
+                    st.markdown(f"<h3 style='color:green;'>{random.choice(PRAISES)}</h3>", unsafe_allow_html=True)
                 else:
-                    st.success("✅ Correct!")
+                    st.markdown("<h3 style='color:green;'>✅ Correct!</h3>", unsafe_allow_html=True)
                 st.session_state.score += 1
             else:
-                st.error(f"❌ Incorrect. Correct answer: {q['answer']}")
-                st.warning(f"📘 中文翻譯：{q['translation']}")
+                st.markdown(f"<h3 style='color:red;'>❌ Incorrect. 正確答案: {q['answer']}</h3>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size:22px;'>📘 中文翻譯：{q['translation']}</p>", unsafe_allow_html=True)
             st.session_state.records.append((q["sentence"], user_input_value or "", is_correct, q["answer"]))
 
     with col2:
@@ -138,8 +152,8 @@ if st.session_state.idx < total:
 else:
     st.subheader("📊 Results")
     score = st.session_state.score
-    st.write(f"Total Score: **{score}/{total}**")
-    st.write(f"Accuracy: **{(score/total)*100:.1f}%**")
+    st.markdown(f"<h3>Total Score: {score}/{total}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>Accuracy: {(score/total)*100:.1f}%</h3>", unsafe_allow_html=True)
 
     with st.expander("查看答題紀錄"):
         for i, (sentence, ans, correct, corr) in enumerate(st.session_state.records, 1):
