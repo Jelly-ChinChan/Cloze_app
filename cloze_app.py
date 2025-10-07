@@ -2,7 +2,7 @@ import streamlit as st
 import random
 
 st.set_page_config(page_title="Cloze Test Practice", page_icon="✍️")
-st.title("✍️ Cloze Test Practice App (One Question at a Time)")
+st.title("✍️ Cloze Test Practice App")
 
 # ===== 打字模式「稱讚語」清單（隨機顯示） =====
 PRAISES = [
