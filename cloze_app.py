@@ -15,24 +15,19 @@ st.markdown(
     /* 進度條卡片與題目間距更小 */
     .progress-card { margin-bottom: 0.25rem !important; }
 
-    /* Radio / TextInput 標籤字體 */
-    .stRadio label, .stTextInput label { font-size: 24px !important; }
-
-    /* 讓選項緊貼題目（去掉上方多餘空白） */
+    /* 移除 Radio 上方多餘空白，讓選項緊貼題目 */
     .stRadio { margin-top: 0 !important; }
     div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stRadio"]) { margin-top: 0 !important; }
 
-    /* 送出/下一題：縮小橫向間距（桌面與手機皆適用） */
-    [data-testid="stHorizontalBlock"]{ gap: 8px !important; } /* 原本 12~24px，改更近 */
+    /* 送出/下一題：讓兩顆按鈕緊貼在同一行（桌面與手機皆適用） */
+    [data-testid="stHorizontalBlock"]{ gap: 4px !important; flex-wrap: nowrap !important; }
+    [data-testid="column"]{ width: auto !important; flex: 0 0 auto !important; }
+    .stButton>button{ height: 48px; padding: 0 18px; }
 
-    /* 手機寬度時仍保持按鈕左右並排，且滿版好點擊 */
+    /* 手機寬度：兩顆按鈕仍緊貼並排、滿版好點擊 */
     @media (max-width: 640px){
-      [data-testid="stHorizontalBlock"]{ flex-wrap: nowrap !important; }
-      [data-testid="column"]{
-        width: calc(50% - 4px) !important;
-        flex: 0 0 calc(50% - 4px) !important;
-      }
       .stButton>button{ width: 100% !important; }
+      [data-testid="column"]{ width: calc(50% - 2px) !important; flex: 0 0 calc(50% - 2px) !important; }
     }
 
     /* 回饋（小字） */
@@ -150,14 +145,13 @@ if st.session_state.idx < total:
             random.shuffle(opts)
             st.session_state.options[q_index] = opts
         options_display = st.session_state.options[q_index]
-        # 2) 移除「選項：」字樣 → 使用 label_visibility="collapsed"
+        # 移除「選項：」字樣，讓選項緊貼題目
         user_input_value = st.radio("", options_display, key=f"mc_{q_index}", label_visibility="collapsed")
     else:
         user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-    # 4) 送出 / 下一題（按鈕更靠近）
+    # 送出 / 下一題（兩顆按鈕緊貼）
     col1, col2 = st.columns([1, 1], gap="small")
-
     with col1:
         disabled_submit = st.session_state.submitted
         if st.button("送出答案", disabled=disabled_submit):
@@ -209,5 +203,23 @@ else:
             icon = "✅" if correct else "❌"
             show_ans = ans if ans != "" else "未作答"
             st.write(f"Q{i}: {sentence} → 你的答案：**{show_ans}**；正解：**{corr}** {icon}")
+
+    # 🎉 完成後放彩帶（confetti）
+    st.markdown(
+        """
+        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+        <script>
+        (function shootConfetti() {
+            var end = Date.now() + (3 * 1000);  // 3 秒
+            (function frame() {
+                confetti({ particleCount: 6, angle: 60, spread: 60, origin: { x: 0 } });
+                confetti({ particleCount: 6, angle: 120, spread: 60, origin: { x: 1 } });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            })();
+        })();
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.button("🔄 再做一次", on_click=init_state)
