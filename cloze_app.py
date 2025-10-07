@@ -1,9 +1,9 @@
 import streamlit as st
 import random
 
-st.set_page_config(page_title="Cloze Test Practice", page_icon="✍️")
+st.set_page_config(page_title="Cloze Test Practice", page_icon="✍️", layout="centered")
 
-# ===== 全域字體樣式 =====
+# ===== 全域字體 & 版面樣式 =====
 st.markdown(
     """
     <style>
@@ -12,6 +12,12 @@ st.markdown(
     }
     h1, h2, h3 {
         font-size: 28px !important;
+        margin-top: 0.2em !important;
+        margin-bottom: 0.3em !important;
+    }
+    .block-container {
+        padding-top: 1rem !important;  /* 頂端留白減少 */
+        padding-bottom: 1rem !important;
     }
     .stRadio label, .stTextInput label {
         font-size: 24px !important;
@@ -21,22 +27,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown("<h1>✍️ Cloze Test Practice App</h1>", unsafe_allow_html=True)
+# ===== App 標題 =====
+st.markdown("<h1 style='margin-top:0;'>✍️ Cloze Test Practice</h1>", unsafe_allow_html=True)
 
 # ===== 打字模式「稱讚語」 =====
 PRAISES = [
-    "你好棒：)",
-    "你真的超強~~",
-    "果然是201的學生><",
-    "太神啦!!",
-    "天啊你是單字魔鬼@@",
-    "呀哈烏拉烏拉烏拉~~~~~",
-    "太厲害了^^",
-    "不愧是展哥教徒呢!",
-    "恭喜尼答對了ㄚㄚㄚ",
-    "挖塞又答對了~",
-    "太驚人了!!",
-    "好扯喔!!!",
+    "你好棒：)", "你真的超強~~", "果然是201的學生><", "太神啦!!", "天啊你是單字魔鬼@@",
+    "烏拉烏拉烏拉@#&%", "太厲害了^^", "不愧是展哥教徒呢!", "恭喜尼答對了ㄚㄚㄚ",
+    "挖塞又答對了~", "太驚人了!!", "好扯喔",
 ]
 
 # ===== 題庫 (15 題 + 中文翻譯) =====
