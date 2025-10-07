@@ -8,20 +8,38 @@ st.markdown(
     """
     <style>
     html, body, [class*="css"]  { font-size: 24px !important; }
-    h2 { font-size: 28px !important; margin-top: 0.35em !important; margin-bottom: 0.35em !important; }
-    .block-container { padding-top: 0.5rem !important; padding-bottom: 1rem !important; max-width: 1000px; }
+    h2 { font-size: 28px !important; margin-top: 0.25em !important; margin-bottom: 0.25em !important; }
+
+    .block-container { padding-top: 0.4rem !important; padding-bottom: 1rem !important; max-width: 1000px; }
+
+    /* 進度條卡片與題目間距更小 */
+    .progress-card { margin-bottom: 0.25rem !important; }
+
+    /* Radio / TextInput 標籤字體 */
     .stRadio label, .stTextInput label { font-size: 24px !important; }
-    /* 送出/下一題：手機也左右並排 */
+
+    /* 讓選項緊貼題目（去掉上方多餘空白） */
+    .stRadio { margin-top: 0 !important; }
+    div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stRadio"]) { margin-top: 0 !important; }
+
+    /* 送出/下一題：縮小橫向間距（桌面與手機皆適用） */
+    [data-testid="stHorizontalBlock"]{ gap: 8px !important; } /* 原本 12~24px，改更近 */
+
+    /* 手機寬度時仍保持按鈕左右並排，且滿版好點擊 */
     @media (max-width: 640px){
-      [data-testid="stHorizontalBlock"]{ gap: 12px !important; flex-wrap: nowrap !important; }
-      [data-testid="column"]{ width: calc(50% - 6px) !important; flex: 0 0 calc(50% - 6px) !important; }
+      [data-testid="stHorizontalBlock"]{ flex-wrap: nowrap !important; }
+      [data-testid="column"]{
+        width: calc(50% - 4px) !important;
+        flex: 0 0 calc(50% - 4px) !important;
+      }
       .stButton>button{ width: 100% !important; }
     }
+
     /* 回饋（小字） */
     .feedback-small { font-size: 18px !important; line-height: 1.4; margin: 6px 0 2px 0; }
     .feedback-correct { color: #1a7f37; font-weight: 700; }
     .feedback-wrong { color: #c62828; font-weight: 700; }
-    .feedback-translation { margin-top: 0.3rem; font-size: 18px !important; }
+    .feedback-translation { margin-top: 0.2rem; font-size: 18px !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -78,7 +96,7 @@ def init_state():
     st.session_state.submitted = False
     st.session_state.options = {}
     st.session_state.records = []
-    st.session_state.last_feedback = ""  # 送出後要顯示在「下一題」按鈕上方
+    st.session_state.last_feedback = ""  # 送出後顯示在「下一題」按鈕上方
 
 if "order" not in st.session_state:
     init_state()
@@ -99,17 +117,17 @@ with st.sidebar:
 
 total = len(st.session_state.order)
 
-# ===== 頂端卡片：進度條（縮小與題目間距） =====
+# ===== 頂端卡片：進度條（間距更小） =====
 current = st.session_state.idx + 1 if st.session_state.idx < total else total
 percent = int(current / total * 100)
 st.markdown(
     f"""
-    <div style='background-color:#f5f5f5; padding:12px 16px; border-radius:12px; margin-bottom:0.4rem;'>
-        <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;'>
+    <div class="progress-card" style='background-color:#f5f5f5; padding:10px 14px; border-radius:12px;'>
+        <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;'>
             <div style='font-size:20px;'>📘 目前進度：{current} / {total}</div>
             <div style='font-size:18px; color:#555;'>{percent}%</div>
         </div>
-        <progress value='{current}' max='{total}' style='width:100%; height:18px;'></progress>
+        <progress value='{current}' max='{total}' style='width:100%; height:16px;'></progress>
     </div>
     """,
     unsafe_allow_html=True
@@ -131,12 +149,13 @@ if st.session_state.idx < total:
             opts = [correct] + distractors
             random.shuffle(opts)
             st.session_state.options[q_index] = opts
-        options_display = st.session_state.options[q_index]  # 不再加入 (空白/略過)
-        user_input_value = st.radio("選項：", options_display, key=f"mc_{q_index}")
+        options_display = st.session_state.options[q_index]
+        # 2) 移除「選項：」字樣 → 使用 label_visibility="collapsed"
+        user_input_value = st.radio("", options_display, key=f"mc_{q_index}", label_visibility="collapsed")
     else:
         user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-    # 送出 / 下一題（手機也左右並排）
+    # 4) 送出 / 下一題（按鈕更靠近）
     col1, col2 = st.columns([1, 1], gap="small")
 
     with col1:
@@ -166,7 +185,7 @@ if st.session_state.idx < total:
                 (q["sentence"], user_input_value or "", is_correct, q["answer"])
             )
 
-    # ✅ 訂正/稱讚：顯示在「下一題」按鈕的上方
+    # 訂正/稱讚：顯示在「下一題」按鈕的上方
     if st.session_state.submitted and st.session_state.last_feedback:
         st.markdown(st.session_state.last_feedback, unsafe_allow_html=True)
 
