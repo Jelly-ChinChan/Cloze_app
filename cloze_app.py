@@ -7,38 +7,21 @@ st.set_page_config(page_title="Cloze Test Practice", page_icon="📝", layout="c
 st.markdown(
     """
     <style>
-    html, body, [class*="css"]  {
-        font-size: 24px !important;
+    html, body, [class*="css"]  { font-size: 24px !important; }
+    h2 { font-size: 28px !important; margin-top: 0.35em !important; margin-bottom: 0.35em !important; }
+    .block-container { padding-top: 0.5rem !important; padding-bottom: 1rem !important; max-width: 1000px; }
+    .stRadio label, .stTextInput label { font-size: 24px !important; }
+    /* 送出/下一題：手機也左右並排 */
+    @media (max-width: 640px){
+      [data-testid="stHorizontalBlock"]{ gap: 12px !important; flex-wrap: nowrap !important; }
+      [data-testid="column"]{ width: calc(50% - 6px) !important; flex: 0 0 calc(50% - 6px) !important; }
+      .stButton>button{ width: 100% !important; }
     }
-    h1, h2, h3 {
-        font-size: 28px !important;
-        margin-top: 0.2em !important;
-        margin-bottom: 0.3em !important;
-    }
-    .block-container {
-        padding-top: 0.5rem !important;  /* 頂端留白更少 */
-        padding-bottom: 1rem !important;
-        max-width: 1000px;
-    }
-    .stRadio label, .stTextInput label {
-        font-size: 24px !important;
-    }
-    .feedback-small {
-        font-size: 18px !important;
-        line-height: 1.4;
-    }
-    .feedback-correct {
-        color: #1a7f37;
-        font-weight: 700;
-    }
-    .feedback-wrong {
-        color: #c62828;
-        font-weight: 700;
-    }
-    .feedback-translation {
-        margin-top: 0.3rem;
-        font-size: 18px !important;
-    }
+    /* 回饋（小字） */
+    .feedback-small { font-size: 18px !important; line-height: 1.4; margin: 6px 0 2px 0; }
+    .feedback-correct { color: #1a7f37; font-weight: 700; }
+    .feedback-wrong { color: #c62828; font-weight: 700; }
+    .feedback-translation { margin-top: 0.3rem; font-size: 18px !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -85,8 +68,6 @@ QUESTION_BANK = [
      "answer": "warmth", "translation": "她相信只有善意的話語才能在人心中帶來溫暖。"},
 ]
 
-MC_BLANK = "(空白/略過)"
-
 # ===== 初始化 =====
 def init_state():
     st.session_state.mode = "選擇題模式"
@@ -97,7 +78,7 @@ def init_state():
     st.session_state.submitted = False
     st.session_state.options = {}
     st.session_state.records = []
-    st.session_state.last_feedback = ""  # 存放右側回饋 HTML
+    st.session_state.last_feedback = ""  # 送出後要顯示在「下一題」按鈕上方
 
 if "order" not in st.session_state:
     init_state()
@@ -106,112 +87,108 @@ if "order" not in st.session_state:
 with st.sidebar:
     st.markdown("### 設定")
     can_change_mode = (st.session_state.idx == 0 and not st.session_state.submitted)
-    st.session_state.mode = st.radio("選擇練習模式",
-                                     ["打字模式", "選擇題模式"],
-                                     index=1, disabled=not can_change_mode)
+    st.session_state.mode = st.radio(
+        "選擇練習模式",
+        ["打字模式", "選擇題模式"],
+        index=1,
+        disabled=not can_change_mode,
+    )
     if st.button("🔄 重新開始"):
         init_state()
         st.rerun()
 
 total = len(st.session_state.order)
 
-# ===== 頂端卡片：進度條 =====
+# ===== 頂端卡片：進度條（縮小與題目間距） =====
 current = st.session_state.idx + 1 if st.session_state.idx < total else total
 percent = int(current / total * 100)
-
 st.markdown(
     f"""
-    <div style='background-color:#f5f5f5; padding:14px 16px; border-radius:12px; margin-bottom:1rem;'>
-        <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;'>
+    <div style='background-color:#f5f5f5; padding:12px 16px; border-radius:12px; margin-bottom:0.4rem;'>
+        <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;'>
             <div style='font-size:20px;'>📘 目前進度：{current} / {total}</div>
             <div style='font-size:18px; color:#555;'>{percent}%</div>
         </div>
-        <progress value='{current}' max='{total}' style='width:100%; height:20px;'></progress>
+        <progress value='{current}' max='{total}' style='width:100%; height:18px;'></progress>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# ===== 主體：左右欄 =====
-left, right = st.columns([3, 2])
+# ===== 題目與作答 =====
+if st.session_state.idx < total:
+    q_index = st.session_state.order[st.session_state.idx]
+    q = QUESTION_BANK[q_index]
 
-with left:
-    if st.session_state.idx < total:
-        q_index = st.session_state.order[st.session_state.idx]
-        q = QUESTION_BANK[q_index]
+    st.markdown(f"<h2>Q{st.session_state.idx + 1}. {q['sentence']}</h2>", unsafe_allow_html=True)
 
-        st.markdown(f"<h2>Q{st.session_state.idx + 1}. {q['sentence']}</h2>", unsafe_allow_html=True)
+    # 顯示輸入或選項
+    if st.session_state.mode == "選擇題模式":
+        if q_index not in st.session_state.options:
+            correct = q["answer"]
+            pool = [x["answer"] for x in QUESTION_BANK if x["answer"] != correct]
+            distractors = random.sample(pool, 3)
+            opts = [correct] + distractors
+            random.shuffle(opts)
+            st.session_state.options[q_index] = opts
+        options_display = st.session_state.options[q_index]  # 不再加入 (空白/略過)
+        user_input_value = st.radio("選項：", options_display, key=f"mc_{q_index}")
+    else:
+        user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-        # 顯示輸入或選項
-        if st.session_state.mode == "選擇題模式":
-            if q_index not in st.session_state.options:
-                correct = q["answer"]
-                pool = [x["answer"] for x in QUESTION_BANK if x["answer"] != correct]
-                distractors = random.sample(pool, 3)
-                opts = [correct] + distractors
-                random.shuffle(opts)
-                st.session_state.options[q_index] = opts
-            options_display = [MC_BLANK] + st.session_state.options[q_index]
-            user_input_value = st.radio("選項：", options_display, key=f"mc_{q_index}")
-            if user_input_value == MC_BLANK:
-                user_input_value = ""
-        else:
-            user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
+    # 送出 / 下一題（手機也左右並排）
+    col1, col2 = st.columns([1, 1], gap="small")
 
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            disabled_submit = st.session_state.submitted
-            if st.button("送出答案", disabled=disabled_submit):
-                st.session_state.submitted = True
-                is_correct = (user_input_value.strip().lower() == q["answer"]) if user_input_value else False
+    with col1:
+        disabled_submit = st.session_state.submitted
+        if st.button("送出答案", disabled=disabled_submit):
+            st.session_state.submitted = True
+            is_correct = (user_input_value.strip().lower() == q["answer"]) if user_input_value else False
 
-                if is_correct:
-                    if st.session_state.mode == "打字模式":
-                        msg = random.choice(PRAISES)
-                        st.session_state.last_feedback = (
-                            f"<div class='feedback-small feedback-correct'>🎉 {msg}</div>"
-                        )
-                    else:
-                        st.session_state.last_feedback = (
-                            "<div class='feedback-small feedback-correct'>✅ Correct!</div>"
-                        )
-                    st.session_state.score += 1
+            if is_correct:
+                if st.session_state.mode == "打字模式":
+                    msg = random.choice(PRAISES)
+                    st.session_state.last_feedback = (
+                        f"<div class='feedback-small feedback-correct'>🎉 {msg}</div>"
+                    )
                 else:
                     st.session_state.last_feedback = (
-                        f"<div class='feedback-small feedback-wrong'>❌ Incorrect. 正確答案：{q['answer']}</div>"
-                        f"<div class='feedback-translation'>📘 中文翻譯：{q['translation']}</div>"
+                        "<div class='feedback-small feedback-correct'>✅ Correct!</div>"
                     )
-
-                st.session_state.records.append(
-                    (q["sentence"], user_input_value or "", is_correct, q["answer"])
+                st.session_state.score += 1
+            else:
+                st.session_state.last_feedback = (
+                    f"<div class='feedback-small feedback-wrong'>❌ Incorrect. 正確答案：{q['answer']}</div>"
+                    f"<div class='feedback-translation'>📘 中文翻譯：{q['translation']}</div>"
                 )
 
-        with col2:
-            if st.session_state.submitted:
-                if st.button("下一題"):
-                    st.session_state.idx += 1
-                    st.session_state.submitted = False
-                    st.session_state.last_feedback = ""
-                    st.rerun()
-    else:
-        st.subheader("📊 Results")
-        score = st.session_state.score
-        st.markdown(f"<h3>Total Score: {score}/{total}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<h3>Accuracy: {(score/total)*100:.1f}%</h3>", unsafe_allow_html=True)
+            st.session_state.records.append(
+                (q["sentence"], user_input_value or "", is_correct, q["answer"])
+            )
 
-        with st.expander("查看答題紀錄"):
-            for i, (sentence, ans, correct, corr) in enumerate(st.session_state.records, 1):
-                icon = "✅" if correct else "❌"
-                show_ans = ans if ans != "" else "未作答"
-                st.write(f"Q{i}: {sentence} → 你的答案：**{show_ans}**；正解：**{corr}** {icon}")
-
-        st.button("🔄 再做一次", on_click=init_state)
-
-with right:
-    if st.session_state.last_feedback:
+    # ✅ 訂正/稱讚：顯示在「下一題」按鈕的上方
+    if st.session_state.submitted and st.session_state.last_feedback:
         st.markdown(st.session_state.last_feedback, unsafe_allow_html=True)
-    else:
-        st.markdown(
-            "<div class='feedback-small' style='color:#666;'>在這裡會顯示答題回饋</div>",
-            unsafe_allow_html=True,
-        )
+
+    with col2:
+        if st.session_state.submitted:
+            if st.button("下一題"):
+                st.session_state.idx += 1
+                st.session_state.submitted = False
+                st.session_state.last_feedback = ""
+                st.rerun()
+
+# ===== 結果頁 =====
+else:
+    st.subheader("📊 Results")
+    score = st.session_state.score
+    st.markdown(f"<h3>Total Score: {score}/{total}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>Accuracy: {(score/total)*100:.1f}%</h3>", unsafe_allow_html=True)
+
+    with st.expander("查看答題紀錄"):
+        for i, (sentence, ans, correct, corr) in enumerate(st.session_state.records, 1):
+            icon = "✅" if correct else "❌"
+            show_ans = ans if ans != "" else "未作答"
+            st.write(f"Q{i}: {sentence} → 你的答案：**{show_ans}**；正解：**{corr}** {icon}")
+
+    st.button("🔄 再做一次", on_click=init_state)
