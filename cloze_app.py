@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.set_page_config(page_title="Cloze Test Practice", page_icon="✍️", layout="centered")
+st.set_page_config(page_title="Cloze Test Practice", page_icon="📝", layout="centered")
 
 # ===== 全域字體 & 版面樣式 =====
 st.markdown(
@@ -16,24 +16,23 @@ st.markdown(
         margin-bottom: 0.3em !important;
     }
     .block-container {
-        padding-top: 1rem !important;  /* 頂端留白減少 */
+        padding-top: 0.5rem !important;  /* 頂端留白更少 */
         padding-bottom: 1rem !important;
-        max-width: 1000px;  /* 讓左右欄位更寬鬆 */
+        max-width: 1000px;
     }
     .stRadio label, .stTextInput label {
         font-size: 24px !important;
     }
-    /* 右側回饋區用較小字體 */
     .feedback-small {
         font-size: 18px !important;
         line-height: 1.4;
     }
     .feedback-correct {
-        color: #1a7f37;  /* 綠色 */
+        color: #1a7f37;
         font-weight: 700;
     }
     .feedback-wrong {
-        color: #c62828;  /* 紅色 */
+        color: #c62828;
         font-weight: 700;
     }
     .feedback-translation {
@@ -44,8 +43,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-st.markdown("<h1 style='margin-top:0;'>✍️ Cloze Test Practice</h1>", unsafe_allow_html=True)
 
 # ===== 打字模式「稱讚語」 =====
 PRAISES = [
@@ -118,8 +115,25 @@ with st.sidebar:
 
 total = len(st.session_state.order)
 
+# ===== 頂端卡片：進度條 =====
+current = st.session_state.idx + 1 if st.session_state.idx < total else total
+percent = int(current / total * 100)
+
+st.markdown(
+    f"""
+    <div style='background-color:#f5f5f5; padding:14px 16px; border-radius:12px; margin-bottom:1rem;'>
+        <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;'>
+            <div style='font-size:20px;'>📘 目前進度：{current} / {total}</div>
+            <div style='font-size:18px; color:#555;'>{percent}%</div>
+        </div>
+        <progress value='{current}' max='{total}' style='width:100%; height:20px;'></progress>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 # ===== 主體：左右欄 =====
-left, right = st.columns([3, 2])  # 左輸入、右回饋
+left, right = st.columns([3, 2])
 
 with left:
     if st.session_state.idx < total:
@@ -144,7 +158,6 @@ with left:
         else:
             user_input_value = st.text_input("請輸入答案：", key=f"input_{q_index}")
 
-        # 送出 / 下一題
         col1, col2 = st.columns([1, 1])
         with col1:
             disabled_submit = st.session_state.submitted
@@ -194,12 +207,10 @@ with left:
 
         st.button("🔄 再做一次", on_click=init_state)
 
-# 右側：回饋區（小字、靠右）
 with right:
     if st.session_state.last_feedback:
         st.markdown(st.session_state.last_feedback, unsafe_allow_html=True)
     else:
-        # 未作答前留空或顯示提示
         st.markdown(
             "<div class='feedback-small' style='color:#666;'>在這裡會顯示答題回饋</div>",
             unsafe_allow_html=True,
